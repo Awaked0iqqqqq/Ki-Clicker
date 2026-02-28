@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Ki Clicker — Awaked0iq</title>
+    <style>
+        :root { 
+            --aura-color: #ff9900; 
+            --btn-bg: rgba(15, 15, 15, 0.9);
+            --shenron-green: #2ecc71;
+            --shenron-gold: #f1c40f;
+        }
+
+        body {
+            margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center;
+            background: #000 url('fond.jpg') no-repeat center center fixed; background-size: cover;
+            color: white; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; user-select: none;
+        }
+
+        /* --- ÉTOILES --- */
+        .star { position: absolute; background: #fff !important; border-radius: 50%; top: -150vh; animation: fall linear infinite; pointer-events: none; z-index: 1; box-shadow: 0 0 6px 1px #fff; }
+        @keyframes fall { from { transform: translateY(0); } to { transform: translateY(300vh); } }
+
+        /* --- UI HAUT GAUCHE (DRAGON BALLS) --- */
+        #db-ui-container {
+            position: fixed; top: 20px; left: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 1000;
+        }
+        #db-counter-ui {
+            display: flex; align-items: center; gap: 10px;
+            background: rgba(0,0,0,0.6); padding: 10px 15px; border-radius: 12px; border: 1px solid #ff9900;
+        }
+        #db-counter-ui img { width: 30px; height: 30px; }
+        #db-count-text { font-weight: bold; font-size: 18px; color: #ff9900; }
+
+        /* BOUTON SUMMON SHENRON */
+        #summon-btn {
+            display: none; background: linear-gradient(135deg, #1b4d3e, #2ecc71);
+            color: white; border: 2px solid #fff; border-radius: 8px; padding: 10px;
+            font-weight: 900; cursor: pointer; animation: pulseSummon 1.5s infinite;
+            text-transform: uppercase; font-size: 12px; letter-spacing: 1px; box-shadow: 0 0 15px rgba(46, 204, 113, 0.4);
+        }
+        @keyframes pulseSummon {
+            0% { transform: scale(1); box-shadow: 0 0 5px #2ecc71; }
+            50% { transform: scale(1.05); box-shadow: 0 0 20px #2ecc71; }
+            100% { transform: scale(1); box-shadow: 0 0 5px #2ecc71; }
+        }
+
+        /* --- SHENRON OVERLAY --- */
+        #shenron-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 9999; display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; backdrop-filter: blur(10px);
+        }
+        #shenron-img-summon { width: 400px; max-width: 90%; filter: drop-shadow(0 0 30px #2ecc71); margin-bottom: 20px; }
+        #shenron-title { color: var(--shenron-green); font-size: 40px; font-weight: 900; text-shadow: 0 0 20px #000; margin-bottom: 10px; }
+        #shenron-subtitle { color: #fff; font-size: 18px; margin-bottom: 40px; opacity: 0.8; }
+        .wish-container { display: flex; gap: 20px; }
+        .wish-card {
+            background: rgba(20,20,20,0.8); border: 2px solid var(--shenron-green); padding: 20px;
+            border-radius: 15px; cursor: pointer; transition: all 0.3s; width: 180px;
+        }
+        .wish-card:hover { transform: translateY(-10px); background: var(--shenron-green); color: #000; box-shadow: 0 0 30px var(--shenron-green); }
+        .wish-card h3 { margin: 0 0 10px 0; font-size: 16px; text-transform: uppercase; }
+        .wish-card p { margin: 0; font-size: 11px; opacity: 0.8; font-weight: bold; }
+
+        /* MESSAGE DU VOEU APRES CHOIX */
+        #wish-notif {
+            position: absolute; top: -50px; left: 50%; transform: translateX(-50%);
+            color: var(--shenron-gold); font-size: 24px; font-weight: 900;
+            text-shadow: 0 0 15px #000; white-space: nowrap; opacity: 0; pointer-events: none;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #wish-notif.show { opacity: 1; top: -80px; }
+
+        /* --- DRAGON BALL APPARITION --- */
+        .dragon-ball-collect {
+            position: fixed; width: 60px; height: 60px; cursor: pointer; z-index: 5000;
+            filter: drop-shadow(0 0 10px #ff9900); animation: pulseDB 1s infinite alternate;
+        }
+        @keyframes pulseDB { from { transform: scale(1); } to { transform: scale(1.2); } }
+
+        /* --- UI HAUT DROITE (SON + INDEX) --- */
+        #top-right-ui {
+            position: fixed; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 1000; align-items: flex-end;
+        }
+        #audio-container {
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); padding: 10px 15px; border-radius: 12px; 
+            border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 15px;
+        }
+        #mute-btn { background: none; border: none; color: var(--aura-color); font-size: 20px; cursor: pointer; transition: transform 0.2s; }
+        #mute-btn:hover { transform: scale(1.2); }
+        #volume-slider { cursor: pointer; accent-color: var(--aura-color); }
+
+        /* --- JEU --- */
+        #game { text-align: center; z-index: 10; width: 100%; max-width: 500px; position: relative; }
+        .ki-count-container { position: relative; display: inline-block; }
+        .ki-count { font-size: 64px; font-weight: 900; color: white; margin: 0; text-shadow: 0 0 20px var(--aura-color); letter-spacing: -2px; }
+        .stats-text { font-size: 14px; margin-top: 10px; font-weight: bold; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); display: inline-block; padding: 10px 25px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); }
+
+        /* --- GOKU & AURA --- */
+        .goku-egg {
+            width: 260px; height: 160px; margin: 30px auto; border: 2px solid var(--aura-color); border-radius: 50%;
+            overflow: hidden; cursor: pointer; background: black; position: relative;
+            animation: battementAura 3s ease-in-out infinite; transition: transform 0.1s, border-color 0.5s;
+        }
+        .goku-egg:active { transform: scale(0.95) !important; }
+        .goku-egg img { width: 100%; height: 100%; object-fit: cover; }
+        @keyframes battementAura {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 20px var(--aura-color); }
+            50% { transform: scale(1.03); box-shadow: 0 0 50px var(--aura-color); }
+        }
+
+        /* --- STYLE DES BOUTONS --- */
+        .btn, .prestige-btn, #rage-btn, .btn-reset, .cheat-btn, #index-btn, .stats-btn {
+            background: var(--btn-bg) !important;
+            backdrop-filter: blur(8px);
+            color: #fff !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+            outline: none;
+        }
+
+        .btn:hover:not(:disabled), .prestige-btn:hover:not(:disabled), #rage-btn:hover:not(:disabled), .btn-reset:hover, .cheat-btn:hover, #index-btn:hover, .stats-btn:hover {
+            background: rgba(30, 30, 30, 0.95) !important;
+            border-color: var(--aura-color) !important;
+            box-shadow: 0 0 15px var(--aura-color);
+            transform: translateY(-2px);
+        }
+
+        .btn:active:not(:disabled), .prestige-btn:active:not(:disabled) { transform: translateY(0) scale(0.97); }
+
+        .upgrade-grid { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
+        .btn { padding: 12px 10px; font-size: 10px; width: 120px; line-height: 1.4; }
+        
+        .btn:disabled, .prestige-btn:disabled { 
+            opacity: 0.2 !important; cursor: not-allowed; transform: none !important; 
+            box-shadow: none !important; border-color: rgba(255,255,255,0.05) !important; filter: grayscale(100%);
+        }
+
+        .prestige-btn { width: 280px; padding: 15px; margin: 25px auto; font-size: 14px; border-width: 1px !important; }
+        #index-btn, .stats-btn { width: 100%; padding: 8px 15px; font-size: 11px; }
+        
+        #rage-btn { display: none; background: rgba(255, 0, 0, 0.1) !important; border-color: rgba(255,0,0,0.3) !important; padding: 10px 20px; margin: 10px auto; font-size: 12px; }
+        #rage-btn:hover { border-color: #ff0000 !important; box-shadow: 0 0 15px #ff0000; }
+
+        .btn-reset { width: 180px; margin-top: 30px; font-size: 9px; opacity: 0.5; border: none !important; background: none !important; }
+        .btn-reset:hover { opacity: 1; color: #ff4444 !important; text-decoration: underline; transform: none; box-shadow: none; }
+
+        /* --- MENUS DÉPLAÇABLES --- */
+        .draggable-menu { 
+            display: none; position: fixed; background: rgba(10, 10, 10, 0.95); 
+            border: 1px solid var(--aura-color); border-radius: 8px; z-index: 2000; 
+            padding-bottom: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+        .menu-header { 
+            background: #1a1a1a; color: #aaa; padding: 10px; cursor: move; font-size: 11px; 
+            font-weight: bold; text-align: center; border-radius: 8px 8px 0 0; border-bottom: 1px solid #333;
+        }
+        
+        #cheat-menu { top: 30px; left: 30px; width: 220px; border-color: #333; }
+        .cheat-btn { display: block; width: 85% !important; margin: 8px auto !important; padding: 8px !important; font-size: 9px !important; font-family: monospace; text-align: left; background: rgba(255,255,255,0.03) !important; border-color: #333 !important; }
+
+        #achievements-menu { top: 100px; left: 50px; width: 300px; }
+        #stats-menu { top: 150px; left: 100px; width: 280px; }
+        
+        .achv-list, .stats-list { max-height: 350px; overflow-y: auto; padding: 10px; }
+        .achv-item, .stat-item { display: flex; align-items: center; justify-content: space-between; padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 11px; }
+        .achv-locked { opacity: 0.4; filter: grayscale(100%); }
+        .achv-unlocked { color: var(--aura-color); font-weight: bold; }
+        .stat-val { color: var(--aura-color); font-weight: bold; }
+
+        /* --- RAGE ACTIVE --- */
+        .rage-active { animation: shake 0.2s infinite !important; border-color: #ff0000 !important; box-shadow: 0 0 50px #ff0000 !important; }
+        @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, -1px); } }
+
+        /* --- NOTIFICATIONS SUCCÈS --- */
+        #achievement-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column-reverse; gap: 10px; z-index: 3000; }
+        .achievement-toast {
+            background: rgba(0, 0, 0, 0.9); backdrop-filter: blur(10px); border: 1px solid var(--aura-color);
+            padding: 12px 20px; border-radius: 8px; display: flex; align-items: center; gap: 15px;
+            animation: slideIn 0.5s ease forwards;
+        }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+
+        /* --- PANELS --- */
+        #prestige-panel { 
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            background: rgba(5,5,5,0.95); backdrop-filter: blur(20px); border: 1px solid var(--aura-color); 
+            padding: 40px; border-radius: 12px; z-index: 2100; text-align: center; width: 300px;
+        }
+
+        .ki-float-text { position: fixed; color: #fff; font-weight: 900; font-size: 24px; pointer-events: none; animation: floatUp 0.8s ease-out forwards; text-shadow: 0 0 10px var(--aura-color); z-index: 1000; }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-80px); } }
+    </style>
+</head>
+<body>
+
+    <div id="shenron-overlay">
+        <img src="shenron.png" id="shenron-img-summon" alt="Shenron">
+        <div id="shenron-title">JE SUIS SHENRON...</div>
+        <div id="shenron-subtitle">DIS-MOI TON SOUHAIT ET JE L'EXAUCERAI.</div>
+        <div class="wish-container">
+            <div class="wish-card" onclick="applyWish('multi')">
+                <h3>PUISSANCE</h3>
+                <p>Multiplier Permanent +2</p>
+            </div>
+            <div class="wish-card" onclick="applyWish('ki')">
+                <h3>FORTUNE</h3>
+                <p>+50% de Ki Total</p>
+            </div>
+            <div class="wish-card" onclick="applyWish('rage')">
+                <h3>FUREUR</h3>
+                <p>Rage x20 au lieu de x10</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="db-ui-container">
+        <div id="db-counter-ui">
+            <img src="db.png" alt="DB">
+            <span id="db-count-text">0 / 7</span>
+        </div>
+        <button id="summon-btn" onclick="openShenron()">🐉 INVOQUER SHENRON</button>
+    </div>
+
+    <div id="achievement-container"></div>
+
+    <div id="cheat-menu" class="draggable-menu">
+        <div class="menu-header" id="cheat-header">> TERMINAL_SAYAN_v1.0</div>
+        <button class="cheat-btn" style="border-color: #ff9900 !important; color: #ff9900 !important;" onclick="spawnDragonBall()">> SPAWN_DRAGON_BALL</button>
+        <button class="cheat-btn" onclick="cheatKi()">> ADD_KI_1M</button>
+        <button class="cheat-btn" onclick="cheatKiMax()">> ADD_MAX_KI</button> 
+        <button class="cheat-btn" onclick="cheatMaxUpgrades()">> SET_UPGRADES_MAX</button>
+        <button class="cheat-btn" onclick="cheatFullEveil()">> SET_ULTIMATE_EVEIL</button>
+        <button class="cheat-btn" style="border-color: #500 !important; color: #f44 !important;" onclick="localStorage.clear(); location.reload();">> WIPE_DATABASE</button>
+        <button class="btn" style="width: 90%; margin: 10px auto; display: block;" onclick="document.getElementById('cheat-menu').style.display='none'">Fermer</button>
+    </div>
+
+    <div id="achievements-menu" class="draggable-menu">
+        <div class="menu-header" id="achievements-header">🏆 INDEX DES SUCCÈS</div>
+        <div class="achv-list" id="achv-list-container"></div>
+        <button class="btn" style="width: 90%; margin: 10px auto; display: block;" onclick="toggleIndex()">Fermer</button>
+    </div>
+
+    <div id="stats-menu" class="draggable-menu">
+        <div class="menu-header" id="stats-header">📊 STATISTIQUES GLOBALES</div>
+        <div class="stats-list">
+            <div class="stat-item"><span>Ki total à vie :</span> <span class="stat-val" id="total-ki-val">0</span></div>
+            <div class="stat-item"><span>Total de clics :</span> <span class="stat-val" id="total-clicks-val">0</span></div>
+            <div class="stat-item"><span>Éveils passés :</span> <span class="stat-val" id="total-rank-val">0</span></div>
+            <div class="stat-item"><span>Temps de jeu :</span> <span class="stat-val" id="total-time-val">0s</span></div>
+        </div>
+        <button class="btn" style="width: 90%; margin: 10px auto; display: block;" onclick="toggleStats()">Fermer</button>
+    </div>
+
+    <div id="top-right-ui">
+        <div id="audio-container">
+            <button id="mute-btn">🔊</button>
+            <input type="range" id="volume-slider" min="0" max="100" value="25">
+            <audio id="bg-music" loop><source src="musique.mp3" type="audio/mpeg"></audio>
+            <audio id="collect-sound"><source src="collect.mp3" type="audio/mpeg"></audio>
+        </div>
+        <button id="index-btn" onclick="toggleIndex()">📜 INDEX DES SUCCÈS</button>
+        <button class="stats-btn" onclick="toggleStats()">📊 STATS GLOBALES</button>
+    </div>
+
+    <div id="star-field"></div>
+
+    <div id="game">
+        <div class="ki-count-container">
+            <div id="wish-notif">SOUHAIT EXAUCÉ !</div>
+            <h1 class="ki-count"><span id="ki">0</span></h1>
+        </div>
+        
+        <div class="stats-text">FORCE : +<span id="kpc-display">1</span> &nbsp;|&nbsp; ÉNERGIE : <span id="kps-display">0</span>/s<br><small style="opacity:0.6">RANG SAYAN : <span id="rank">0</span></small></div>
+        
+        <div class="goku-egg" id="goku-main" onclick="clickKi(event)">
+            <img src="goku0.png" id="goku-img" alt="Guerrier">
+        </div>
+        
+        <button id="rage-btn" onclick="activateRage()">🔥 MODE RAGE (X10) 🔥</button>
+
+        <div class="upgrade-grid">
+            <button class="btn" id="btn-c" onclick="buy('c')">TECHNIQUE<br><span id="count-c">0</span>/100<br><b id="cost-c">10</b> Ki</button>
+            <button class="btn" id="btn-s" onclick="buy('s')">ÉLÈVE<br><span id="count-s">0</span>/20<br><b id="cost-s">50</b> Ki</button>
+            <button class="btn" id="btn-m" onclick="buy('m')">MÉDITATION<br><span id="count-m">0</span>/5<br><b id="cost-m">500</b> Ki</button>
+        </div>
+        
+        <div class="prestige-btn" id="prestige-trigger" onclick="openEveil()">⚡ ÉVEIL SPIRITUEL ⚡<br><small style="opacity:0.7">Multiplier actuel : x<span id="cur-mult">1</span></small></div>
+        
+        <button class="btn-reset" onclick="confirmReset()">Réinitialiser le Dojo</button>
+    </div>
+
+    <div id="prestige-panel">
+        <h2 style="color:var(--aura-color); margin-top:0; letter-spacing:2px;">ÉVEIL</h2>
+        <p style="font-size:13px; line-height:1.6; opacity:0.8;">Atteignez un nouveau stade de puissance pour multiplier votre force par 3 de façon permanente.</p>
+        <p>Prix : <b style="color: #fff;"><span id="p-cost">1000</span> Ki</b></p>
+        <button class="btn" style="width:100%; height:50px; font-size:12px;" id="confirm-prestige-btn" onclick="doPrestige()">ACCOMPLIR L'ÉVEIL</button><br><br>
+        <button onclick="openEveil()" style="background:none; border:none; color:rgba(255,255,255,0.4); cursor:pointer; text-decoration:underline; font-size:11px;">Plus tard</button>
+    </div>
+
+    <script>
+        let ki = 0, kpc = 1, kps = 0, mult = 1, rIdx = 0;
+        let costC = 10, costS = 50, costM = 500;
+        let countC = 0, countS = 0, countM = 0;
+        let isRage = false, rageMult = 1, rageBasePower = 10;
+        let totalKi = 0, totalClicks = 0, totalSeconds = 0;
+        let dbCount = 0; 
+        let dbBoostMult = 1; 
+
+        const achvDB = {
+            ki10: "Premier Éclat (10 Ki)", ki100: "Concentration (100 Ki)", ki1000: "Guerrier (1 000 Ki)",
+            tech1: "Apprenti (1 Technique)", tech10: "Combattant (10 Techniques)", tech100: "Maître Martial (100 Techniques)",
+            eleve1: "Senseï (1 Élève)", eleve5: "Petit Dojo (5 Élèves)", eleve10: "École Reconnue (10 Élèves)",
+            eleve15: "Faction (15 Élèves)", eleve20: "Grand Maître (20 Élèves)",
+            med1: "Paix Intérieure (1 Méditation)", med5: "Nirvana (5 Méditations)",
+            eveil1: "Dépassement (Éveil 1)", eveil2: "Super Sayan (Éveil 2)", eveil3: "Ascendant (Éveil 3)",
+            eveil4: "Divin (Éveil 4)", eveil5: "Ultra Instinct (Éveil 5)",
+            cheat: "Tricheur (Terminal Ouvert)"
+        };
+
+        let achievements = {};
+        for (let key in achvDB) { achievements[key] = false; }
+        
+        const pCosts = [1000, 10000, 100000, 1000000, 10000000, 100000000];
+
+        function save() {
+            const data = { ki, kpc, kps, mult, rIdx, costC, costS, costM, countC, countS, countM, achievements, totalKi, totalClicks, totalSeconds, dbCount, rageBasePower };
+            localStorage.setItem('kiClicker_save', JSON.stringify(data));
+        }
+
+        function load() {
+            const saved = localStorage.getItem('kiClicker_save');
+            if (saved) {
+                const d = JSON.parse(saved);
+                ki = d.ki || 0; kpc = d.kpc || 1; kps = d.kps || 0; mult = d.mult || 1; rIdx = d.rIdx || 0;
+                costC = d.costC || 10; costS = d.costS || 50; costM = d.costM || 500;
+                countC = d.countC || 0; countS = d.countS || 0; countM = d.countM || 0;
+                totalKi = d.totalKi || 0; totalClicks = d.totalClicks || 0;
+                totalSeconds = d.totalSeconds || 0;
+                dbCount = d.dbCount || 0;
+                rageBasePower = d.rageBasePower || 10;
+                if(d.achievements) { for(let key in d.achievements) { achievements[key] = d.achievements[key]; } }
+                document.getElementById('goku-img').src = "goku" + rIdx + ".png";
+                document.getElementById('db-count-text').innerText = dbCount + " / 7";
+                updateUI();
+                renderAchievements();
+            }
+        }
+
+        // --- SYSTEME SHENRON ---
+        function openShenron() {
+            document.getElementById('shenron-overlay').style.display = 'flex';
+        }
+
+        function applyWish(type) {
+            let msg = "";
+            if (type === 'multi') {
+                mult += 2;
+                msg = "MULTIPLICATEUR PERMANENT +2 !";
+            } else if (type === 'ki') {
+                let bonus = totalKi * 0.5;
+                ki += bonus;
+                totalKi += bonus;
+                msg = "SOUHAIT DE FORTUNE EXAUCÉ !";
+            } else if (type === 'rage') {
+                rageBasePower = 20;
+                msg = "LA FUREUR SAYAN EST DOUBLÉE !";
+            }
+
+            dbCount = 0;
+            document.getElementById('db-count-text').innerText = "0 / 7";
+            document.getElementById('shenron-overlay').style.display = 'none';
+            
+            const notif = document.getElementById('wish-notif');
+            notif.innerText = msg;
+            notif.classList.add('show');
+            setTimeout(() => { notif.classList.remove('show'); }, 5000);
+
+            updateUI();
+            save();
+        }
+
+        // --- SYSTEME DRAGON BALL ---
+        function spawnDragonBall() {
+            const db = document.createElement('img');
+            db.src = 'db.png';
+            db.className = 'dragon-ball-collect';
+            
+            const x = Math.random() * (window.innerWidth - 100) + 50;
+            const y = Math.random() * (window.innerHeight - 100) + 50;
+            db.style.left = x + 'px';
+            db.style.top = y + 'px';
+
+            db.onclick = () => {
+                if(dbCount < 7) {
+                    dbCount++;
+                    document.getElementById('db-count-text').innerText = dbCount + " / 7";
+                    const coinSound = document.getElementById('collect-sound');
+                    coinSound.currentTime = 0;
+                    coinSound.play();
+
+                    dbBoostMult = 2;
+                    db.remove();
+                    
+                    const toast = document.createElement('div');
+                    toast.className = 'achievement-toast';
+                    toast.style.borderColor = "#ff9900";
+                    toast.innerHTML = `<div>🟠</div><div><div style="color:#ff9900; font-size:9px; font-weight:bold;">BOOST DRAGON BALL</div><div style="font-weight:bold; font-size:12px;">KI X2 (10s)</div></div>`;
+                    document.getElementById('achievement-container').appendChild(toast);
+                    
+                    setTimeout(() => { dbBoostMult = 1; toast.remove(); }, 10000);
+                    updateUI();
+                    save();
+                } else {
+                    db.remove();
+                }
+            };
+
+            document.body.appendChild(db);
+            setTimeout(() => { if(db.parentNode) db.remove(); }, 15000);
+        }
+
+        // --- AUDIO ---
+        const audio = document.getElementById('bg-music');
+        document.getElementById('volume-slider').addEventListener('input', (e) => { 
+            audio.volume = e.target.value / 100; 
+            document.getElementById('collect-sound').volume = e.target.value / 100;
+        });
+        document.getElementById('mute-btn').onclick = () => { audio.paused ? audio.play() : audio.pause(); };
+        document.body.addEventListener('click', () => { if (audio.paused) audio.play(); }, { once: true });
+
+        // --- CLICK ---
+        function clickKi(event) {
+            let gain = Math.floor(kpc * mult * rageMult * dbBoostMult);
+            ki += gain; 
+            totalKi += gain;
+            totalClicks++;
+            updateUI();
+            const f = document.createElement('div');
+            f.className = 'ki-float-text'; f.innerText = '+' + gain;
+            f.style.left = event.clientX + 'px'; f.style.top = event.clientY + 'px';
+            document.body.appendChild(f); setTimeout(() => f.remove(), 800);
+        }
+
+        function buy(t) {
+            if (t === 'c' && ki >= costC && countC < 100) { ki -= costC; countC++; kpc++; costC = Math.round(costC * 1.5); }
+            if (t === 's' && ki >= costS && countS < 20) { ki -= costS; countS++; kps++; costS = Math.round(costS * 1.6); }
+            if (t === 'm' && ki >= costM && countM < 5) { ki -= costM; countM++; kps += 10; costM = Math.round(costM * 1.7); }
+            save(); updateUI();
+        }
+
+        function openEveil() {
+            let p = document.getElementById('prestige-panel');
+            p.style.display = (p.style.display === 'block') ? 'none' : 'block';
+        }
+
+        function doPrestige() {
+            let currentCost = pCosts[rIdx];
+            if (ki >= currentCost) {
+                ki = 0; kpc = 1; kps = 0; countC = 0; countS = 0; countM = 0;
+                costC = 10; costS = 50; costM = 500; mult *= 3; rIdx++;
+                document.getElementById('goku-img').src = "goku" + rIdx + ".png";
+                save(); openEveil(); updateUI();
+            }
+        }
+
+        function activateRage() {
+            if (isRage) return;
+            isRage = true; rageMult = rageBasePower;
+            document.getElementById('goku-main').classList.add('rage-active');
+            document.getElementById('rage-btn').disabled = true;
+            document.getElementById('rage-btn').innerText = "RAGE ACTIVE !";
+            setTimeout(() => {
+                isRage = false; rageMult = 1;
+                document.getElementById('goku-main').classList.remove('rage-active');
+                document.getElementById('rage-btn').innerText = "RÉCUPÉRATION...";
+                setTimeout(() => {
+                    document.getElementById('rage-btn').disabled = false;
+                    document.getElementById('rage-btn').innerText = "🔥 MODE RAGE (X10) 🔥";
+                }, 30000);
+            }, 15000);
+            updateUI();
+        }
+
+        function toggleIndex() {
+            let menu = document.getElementById('achievements-menu');
+            menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+            renderAchievements();
+        }
+
+        function toggleStats() {
+            let menu = document.getElementById('stats-menu');
+            menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+            if(menu.style.display === 'block') updateStatsUI();
+        }
+
+        function updateStatsUI() {
+            document.getElementById('total-ki-val').innerText = Math.floor(totalKi).toLocaleString();
+            document.getElementById('total-clicks-val').innerText = totalClicks.toLocaleString();
+            document.getElementById('total-rank-val').innerText = rIdx;
+            document.getElementById('total-time-val').innerText = formatTime(totalSeconds);
+        }
+
+        function renderAchievements() {
+            let container = document.getElementById('achv-list-container');
+            container.innerHTML = "";
+            for (let key in achvDB) {
+                let unlocked = achievements[key];
+                let div = document.createElement('div');
+                div.className = `achv-item ${unlocked ? 'achv-unlocked' : 'achv-locked'}`;
+                div.innerHTML = `<span>${unlocked ? achvDB[key] : "??? (" + achvDB[key].split('(')[1]}</span> <span>${unlocked ? "✔" : "🔒"}</span>`;
+                container.appendChild(div);
+            }
+        }
+
+        function unlockAchievement(id, name) {
+            if (achievements[id]) return;
+            achievements[id] = true;
+            save();
+            renderAchievements();
+            const container = document.getElementById('achievement-container');
+            const toast = document.createElement('div');
+            toast.className = 'achievement-toast';
+            toast.innerHTML = `<div style="font-size: 20px;">🏆</div><div><div style="color:var(--aura-color); font-size:9px; font-weight:bold;">SUCCÈS DÉBLOQUÉ</div><div style="font-weight:bold; font-size:12px;">${name}</div></div>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = "0"; setTimeout(() => toast.remove(), 500); }, 4000);
+        }
+
+        function checkAchievements() {
+            if (ki >= 10 && !achievements.ki10) unlockAchievement('ki10', achvDB.ki10);
+            if (ki >= 100 && !achievements.ki100) unlockAchievement('ki100', achvDB.ki100);
+            if (ki >= 1000 && !achievements.ki1000) unlockAchievement('ki1000', achvDB.ki1000);
+            if (countC >= 1 && !achievements.tech1) unlockAchievement('tech1', achvDB.tech1);
+            if (countC >= 10 && !achievements.tech10) unlockAchievement('tech10', achvDB.tech10);
+            if (countC >= 100 && !achievements.tech100) unlockAchievement('tech100', achvDB.tech100);
+            if (countS >= 1 && !achievements.eleve1) unlockAchievement('eleve1', achvDB.eleve1);
+            if (countS >= 5 && !achievements.eleve5) unlockAchievement('eleve5', achvDB.eleve5);
+            if (countS >= 10 && !achievements.eleve10) unlockAchievement('eleve10', achvDB.eleve10);
+            if (countS >= 15 && !achievements.eleve15) unlockAchievement('eleve15', achvDB.eleve15);
+            if (countS >= 20 && !achievements.eleve20) unlockAchievement('eleve20', achvDB.eleve20);
+            if (countM >= 1 && !achievements.med1) unlockAchievement('med1', achvDB.med1);
+            if (countM >= 5 && !achievements.med5) unlockAchievement('med5', achvDB.med5);
+            if (rIdx >= 1 && !achievements.eveil1) unlockAchievement('eveil1', achvDB.eveil1);
+            if (rIdx >= 2 && !achievements.eveil2) unlockAchievement('eveil2', achvDB.eveil2);
+            if (rIdx >= 3 && !achievements.eveil3) unlockAchievement('eveil3', achvDB.eveil3);
+            if (rIdx >= 4 && !achievements.eveil4) unlockAchievement('eveil4', achvDB.eveil4);
+            if (rIdx >= 5 && !achievements.eveil5) unlockAchievement('eveil5', achvDB.eveil5);
+        }
+
+        function updateUI() {
+            document.getElementById('ki').innerText = Math.floor(ki).toLocaleString();
+            document.getElementById('kpc-display').innerText = Math.floor(kpc * mult * rageMult * dbBoostMult);
+            document.getElementById('kps-display').innerText = Math.floor(kps * mult * rageMult * dbBoostMult);
+            document.getElementById('rank').innerText = rIdx;
+            
+            let currentCost = pCosts[rIdx] || "MAX";
+            document.getElementById('p-cost').innerText = typeof currentCost === "number" ? currentCost.toLocaleString() : currentCost;
+            document.getElementById('cur-mult').innerText = Math.floor(mult);
+            document.getElementById('confirm-prestige-btn').disabled = (ki < currentCost);
+
+            document.getElementById('count-c').innerText = countC;
+            document.getElementById('count-s').innerText = countS;
+            document.getElementById('count-m').innerText = countM;
+            document.getElementById('cost-c').innerText = costC;
+            document.getElementById('cost-s').innerText = costS;
+            document.getElementById('cost-m').innerText = costM;
+
+            document.getElementById('summon-btn').style.display = (dbCount >= 7) ? 'block' : 'none';
+
+            let colors = ["#ff9900", "#00ff00", "#0000ff", "#32cd32", "#00ffff", "#ff0000", "#ffffff"];
+            let auraColor = colors[rIdx] || "#ffffff";
+            document.documentElement.style.setProperty('--aura-color', auraColor);
+
+            if (rIdx >= 1) document.getElementById('rage-btn').style.display = 'block';
+            document.getElementById('btn-c').disabled = (ki < costC || countC >= 100);
+            document.getElementById('btn-s').disabled = (ki < costS || countS >= 20);
+            document.getElementById('btn-m').disabled = (ki < costM || countM >= 5);
+            
+            if(document.getElementById('stats-menu').style.display === 'block') updateStatsUI();
+            checkAchievements();
+        }
+
+        function formatTime(s) {
+            let h = Math.floor(s / 3600); let m = Math.floor((s % 3600) / 60); let sec = s % 60;
+            return (h > 0 ? h + "h " : "") + (m > 0 ? m + "m " : "") + sec + "s";
+        }
+
+        function createStars() {
+            const field = document.getElementById('star-field');
+            for (let i = 0; i < 80; i++) {
+                let star = document.createElement('div'); star.className = 'star';
+                let size = (Math.random() * 2 + 1) + 'px';
+                star.style.width = size; star.style.height = size;
+                star.style.left = Math.random() * 100 + 'vw';
+                star.style.animationDuration = (Math.random() * 5 + 8) + 's';
+                field.appendChild(star);
+            }
+        }
+        createStars();
+
+        // --- CHEAT CODE ---
+        const code = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a", "Enter"];
+        let cPos = 0;
+        document.addEventListener('keydown', (e) => {
+            if (e.key === code[cPos]) { cPos++; if (cPos === code.length) { document.getElementById('cheat-menu').style.display = 'block'; unlockAchievement('cheat', 'Tricheur'); cPos = 0; } } else cPos = 0;
+        });
+
+        function cheatKi() { ki += 1000000; totalKi += 1000000; updateUI(); }
+        function cheatKiMax() { ki += 100000000000; totalKi += 100000000000; updateUI(); }
+        function cheatMaxUpgrades() { countC = 100; kpc = 101; countS = 20; countM = 5; kps = 70; updateUI(); }
+        function cheatFullEveil() { rIdx = 6; mult = 729; document.getElementById('goku-img').src = "goku6.png"; updateUI(); }
+        function confirmReset() { if (confirm("⚠️ Réinitialiser tout ?")) { localStorage.clear(); location.reload(); } }
+
+        setInterval(() => { 
+            let gain = (kps * mult * rageMult * dbBoostMult);
+            ki += gain; totalKi += gain;
+            totalSeconds++;
+            if(totalSeconds % 60 === 0) spawnDragonBall();
+            updateUI(); 
+            if(totalSeconds % 30 === 0) save();
+        }, 1000);
+
+        load();
+
+        function makeDraggable(menuId, headerId) {
+            const menu = document.getElementById(menuId);
+            const header = document.getElementById(headerId);
+            let isDragging = false, offsetX = 0, offsetY = 0;
+            header.addEventListener('mousedown', (e) => { isDragging = true; offsetX = e.clientX - menu.getBoundingClientRect().left; offsetY = e.clientY - menu.getBoundingClientRect().top; });
+            document.addEventListener('mousemove', (e) => { if (!isDragging) return; menu.style.left = (e.clientX - offsetX) + 'px'; menu.style.top = (e.clientY - offsetY) + 'px'; });
+            document.addEventListener('mouseup', () => { isDragging = false; });
+        }
+        makeDraggable('cheat-menu', 'cheat-header');
+        makeDraggable('achievements-menu', 'achievements-header');
+        makeDraggable('stats-menu', 'stats-header');
+    </script>
+</body>
+</html>
